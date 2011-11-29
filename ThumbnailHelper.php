@@ -1,9 +1,8 @@
 <?php
 
 /**
- * 
- *
  * @author Emerson Soares (dev.emerson@gmail.com)
+ * @filesource https://github.com/emersonsoares/ThumbnailsHelper-for-CakePHP
  */
 class ThumbnailHelper extends AppHelper {
 
@@ -13,6 +12,7 @@ class ThumbnailHelper extends AppHelper {
     private $newHeight = 225;
     private $quality = 80;
     private $path = '';
+    private $srcImage = '';
 
     public function render($image, $params) {
         if (isset($params['path'])) {
@@ -42,16 +42,22 @@ class ThumbnailHelper extends AppHelper {
         } else {
             $this->cachePath = 'cache' . DS . $this->newWidth . 'x' . $this->newHeight . DS . $this->quality;
         }
+        
+        $this->srcImage = $image;
 
-        if (file_exists($this->absoluteCachePath . DS . $this->cachePath . DS . $image)) {
-            return $this->cachePath . DS . $image;
+        if (file_exists($this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage)) {
+            return $this->cachePath . DS . $this->srcImage;
         } else {
-            return $this->createThumb($image);
+            return $this->cropedImage();
         }
     }
 
-    private function createThumb($image) {
-        $filename = $this->absoluteCachePath . DS . $this->path . DS . $image;
+    private function cropedImage() {
+        return $this->saveImgCache();
+    }
+
+    private function saveImgCache() {
+        $filename = $this->absoluteCachePath . DS . $this->path . DS . $this->srcImage;
 
         if (!file_exists($this->absoluteCachePath . DS . $this->cachePath))
             mkdir($this->absoluteCachePath . DS . $this->cachePath, 0777, true);
@@ -68,9 +74,9 @@ class ThumbnailHelper extends AppHelper {
 
                 imagecopyresampled($imageTmp, $srcImage, 0, 0, 0, 0, $this->newWidth, $this->newHeight, $width, $heigth);
 
-                if (imagejpeg($imageTmp, $this->absoluteCachePath . DS . $this->cachePath . DS . $image, $this->quality)) {
+                if (imagejpeg($imageTmp, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage, $this->quality)) {
                     imagedestroy($imageTmp);
-                    return $this->cachePath . DS . $image;
+                    return $this->cachePath . DS . $this->srcImage;
                 }
                 break;
             case 'png':
@@ -78,9 +84,9 @@ class ThumbnailHelper extends AppHelper {
 
                 imagecopyresampled($imageTmp, $srcImage, 0, 0, 0, 0, $this->newWidth, $this->newHeight, $width, $heigth);
 
-                if (imagepng($imageTmp, $this->absoluteCachePath . DS . $this->cachePath . DS . $image, $this->quality)) {
+                if (imagepng($imageTmp, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage, $this->quality)) {
                     imagedestroy($imageTmp);
-                    return $this->cachePath . DS . $image;
+                    return $this->cachePath . DS . $this->srcImage;
                 }
                 break;
             case 'gif':
@@ -88,9 +94,9 @@ class ThumbnailHelper extends AppHelper {
 
                 imagecopyresampled($imageTmp, $srcImage, 0, 0, 0, 0, $this->newWidth, $this->newHeight, $width, $heigth);
 
-                if (imagegif($imageTmp, $this->absoluteCachePath . DS . $this->cachePath . DS . $image, $this->quality)) {
+                if (imagegif($imageTmp, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage, $this->quality)) {
                     imagedestroy($imageTmp);
-                    return $this->cachePath . DS . $image;
+                    return $this->cachePath . DS . $this->srcImage;
                 }
                 break;
             default:
