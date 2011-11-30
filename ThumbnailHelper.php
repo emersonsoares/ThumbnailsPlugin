@@ -18,13 +18,25 @@ class ThumbnailHelper extends AppHelper {
     private $srcWidth;
     private $srcHeight;
     private $quality = 80;
-    private $path = '';
+    private $path = 'uploads/images/';
     private $srcImage = '';
     private $resizeOption = 'auto';
     private $openedImage = '';
     private $imageResized = '';
 
     public function render($image, $params) {
+        $this->setup($image, $params);
+
+        if (file_exists($this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage)) {
+            return $this->openCachedImage();
+        } else if ($this->openSrcImage()) {
+            $this->resizeImage();
+            $this->saveImgCache();
+            return $this->cachePath . DS . $this->srcImage;
+        }
+    }
+
+    private function setup($image, $params) {
         if (isset($params['path'])) {
             $this->path = $params['path'] . DS;
         }
@@ -58,14 +70,6 @@ class ThumbnailHelper extends AppHelper {
         }
 
         $this->srcImage = $image;
-
-        if (file_exists($this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage)) {
-            return $this->openCachedImage();
-        } else if ($this->openSrcImage()) {
-            $this->resizeImage();
-            $this->saveImgCache();
-            return $this->cachePath . DS . $this->srcImage;
-        }
     }
 
     private function openCachedImage() {
