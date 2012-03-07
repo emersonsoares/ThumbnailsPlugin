@@ -9,7 +9,7 @@
  * @author Emerson Soares (dev.emerson@gmail.com)
  * @filesource https://github.com/emersonsoares/ThumbnailsHelper-for-CakePHP
  */
-class ThumbnailHelper extends AppHelper {
+class ThumbnailHelper extends HtmlHelper {
 
     private $absoluteCachePath = '';
     private $cachePath = '';
@@ -24,15 +24,22 @@ class ThumbnailHelper extends AppHelper {
     private $openedImage = '';
     private $imageResized = '';
 
-    public function render($image, $params) {
+    /**
+     *
+     * @param string $image Caminho da imagem no servidor
+     * @param array $params Parametros de configuração do Thumbnail
+     * @param array $options Parametros de configuração da tag <img/>
+     * @return string Retorna uma tag imagem, configurada de acordo com os parametros recebidos. 
+     */
+    public function render($image, $params, $options = null) {
         $this->setup($image, $params);
 
         if (file_exists($this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage)) {
-            return $this->openCachedImage();
+            return $this->image($this->openCachedImage(), $options);
         } else if ($this->openSrcImage()) {
             $this->resizeImage();
             $this->saveImgCache();
-            return $this->cachePath . DS . $this->srcImage;
+            return $this->image($this->cachePath . DS . $this->srcImage, $options);
         }
     }
 
@@ -41,12 +48,12 @@ class ThumbnailHelper extends AppHelper {
             $this->path = $params['path'] . DS;
         }
 
-        if (isset($params['newWidth'])) {
-            $this->newWidth = $params['newWidth'];
+        if (isset($params['width'])) {
+            $this->newWidth = $params['width'];
         }
 
-        if (isset($params['newHeight'])) {
-            $this->newHeight = $params['newHeight'];
+        if (isset($params['height'])) {
+            $this->newHeight = $params['height'];
         }
 
         if (isset($params['quality'])) {
