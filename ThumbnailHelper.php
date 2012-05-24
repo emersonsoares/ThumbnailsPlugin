@@ -8,7 +8,7 @@
  * @author Emerson Soares (dev.emerson@gmail.com)
  * @filesource https://github.com/emersonsoares/ThumbnailsHelper-for-CakePHP
  */
-class ThumbnailHelper extends HtmlHelper {
+class ThumbnailHelper extends AppHelper {
 
     private $absoluteCachePath = '';
     private $cachePath = '';
