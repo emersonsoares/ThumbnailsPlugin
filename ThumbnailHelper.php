@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Helper to generate thumbnail images dynamically by saving them to the cache.
  * Alternative to phpthumb.
@@ -9,7 +8,7 @@
  * @author Emerson Soares (dev.emerson@gmail.com)
  * @filesource https://github.com/emersonsoares/ThumbnailsHelper-for-CakePHP
  */
-class ThumbnailHelper extends AppHelper {
+class ThumbnailHelper extends HtmlHelper {
 
     private $absoluteCachePath = '';
     private $cachePath = '';
@@ -24,15 +23,22 @@ class ThumbnailHelper extends AppHelper {
     private $openedImage = '';
     private $imageResized = '';
 
-    public function render($image, $params) {
+    /**
+     *
+     * @param string $image Caminho da imagem no servidor
+     * @param array $params Parametros de configuração do Thumbnail
+     * @param array $options Parametros de configuração da tag <img/>
+     * @return string Retorna uma tag imagem, configurada de acordo com os parametros recebidos. 
+     */
+    public function render($image, $params, $options = null) {
         $this->setup($image, $params);
 
         if (file_exists($this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage)) {
-            return $this->openCachedImage();
+            return $this->image($this->openCachedImage(), $options);
         } else if ($this->openSrcImage()) {
             $this->resizeImage();
             $this->saveImgCache();
-            return $this->cachePath . DS . $this->srcImage;
+            return $this->image($this->cachePath . DS . $this->srcImage, $options);
         }
     }
 
@@ -41,12 +47,12 @@ class ThumbnailHelper extends AppHelper {
             $this->path = $params['path'] . DS;
         }
 
-        if (isset($params['newWidth'])) {
-            $this->newWidth = $params['newWidth'];
+        if (isset($params['width'])) {
+            $this->newWidth = $params['width'];
         }
 
-        if (isset($params['newHeight'])) {
-            $this->newHeight = $params['newHeight'];
+        if (isset($params['height'])) {
+            $this->newHeight = $params['height'];
         }
 
         if (isset($params['quality'])) {
@@ -77,17 +83,20 @@ class ThumbnailHelper extends AppHelper {
     }
 
     private function openSrcImage() {
-        if (file_exists($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage)) {
-            list($width, $heigth) = getimagesize($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage);
+      $image_path = $this->absoluteCachePath . DS . $this->path . DS . $this->srcImage;
+      if (file_exists($image_path)) {
 
-            $this->srcWidth = $width;
-            $this->srcHeight = $heigth;
+          list($width, $heigth) = getimagesize($image_path);
 
-            $this->openedImage = $this->openImage($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage);
-            return true;
-        } else {
-            return false;
-        }
+          $this->srcWidth = $width;
+          $this->srcHeight = $heigth;
+
+          $this->openedImage = $this->openImage($image_path);
+
+          return true;
+      } else {
+          return false;
+      }
     }
 
     private function saveImgCache() {
@@ -115,13 +124,12 @@ class ThumbnailHelper extends AppHelper {
                 $invertScaleQuality = 9 - $scaleQuality;
 
                 if (imagetypes() & IMG_PNG) {
-                    imagepng($this->imageResized, $savePath, $invertScaleQuality);
+                    imagepng($this->imageResized, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage, $invertScaleQuality);
                 }
                 break;
             default:
                 break;
         }
-
         imagedestroy($this->imageResized);
     }
 
@@ -130,6 +138,31 @@ class ThumbnailHelper extends AppHelper {
 
         $optimalWidth = $options['optimalWidth'];
         $optimalHeight = $options['optimalHeight'];
+
+        if($optimalWidth > $this->srcWidth)
+        {
+            $optimalWidth = $this->srcWidth;
+        }
+
+        if($optimalHeight > $this->srcHeight)
+        {
+            $optimalHeight = $this->srcHeight;
+        }
+
+        // generate new w/h if not provided
+        if($optimalWidth && !$optimalHeight)
+        {
+        	$optimalHeight = $this->srcHeight * ($optimalHeight / $this->srcWidth);
+        }
+        elseif($optimalHeight && !$optimalWidth)
+        {
+        	$optimalWidth = $this->srcWidth * ($optimalHeight / $this->srcHeight);
+        }
+        elseif(!$optimalWidth && !$optimalHeight)
+        {
+        	$optimalWidth = $this->srcWidth;
+        	$optimalHeight = $this->srcHeight;
+        }
 
         $this->imageResized = imagecreatetruecolor($optimalWidth, $optimalHeight);
 
@@ -253,5 +286,4 @@ class ThumbnailHelper extends AppHelper {
     }
 
 }
-
 ?>
