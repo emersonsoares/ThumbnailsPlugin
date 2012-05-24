@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Helper to generate thumbnail images dynamically by saving them to the cache.
  * Alternative to phpthumb.
@@ -18,7 +17,7 @@ class ThumbnailHelper extends HtmlHelper {
     private $srcWidth;
     private $srcHeight;
     private $quality = 80;
-    private $path = 'uploads/images/';
+    private $path = '';
     private $srcImage = '';
     private $resizeOption = 'auto';
     private $openedImage = '';
@@ -84,17 +83,20 @@ class ThumbnailHelper extends HtmlHelper {
     }
 
     private function openSrcImage() {
-        if (file_exists($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage)) {
-            list($width, $heigth) = getimagesize($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage);
+      $image_path = $this->absoluteCachePath . DS . $this->path . DS . $this->srcImage;
+      if (file_exists($image_path)) {
 
-            $this->srcWidth = $width;
-            $this->srcHeight = $heigth;
+          list($width, $heigth) = getimagesize($image_path);
 
-            $this->openedImage = $this->openImage($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage);
-            return true;
-        } else {
-            return false;
-        }
+          $this->srcWidth = $width;
+          $this->srcHeight = $heigth;
+
+          $this->openedImage = $this->openImage($image_path);
+
+          return true;
+      } else {
+          return false;
+      }
     }
 
     private function saveImgCache() {
@@ -117,18 +119,18 @@ class ThumbnailHelper extends HtmlHelper {
                 }
                 break;
             case '.png':
-                $scaleQuality = round(($imageQuality / 100) * 9);
+                $scaleQuality = round(($this->quality / 100) * 9);
 
                 $invertScaleQuality = 9 - $scaleQuality;
 
                 if (imagetypes() & IMG_PNG) {
                     imagepng($this->imageResized, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage, $invertScaleQuality);
                 }
+                
                 break;
             default:
                 break;
         }
-
         imagedestroy($this->imageResized);
     }
 
@@ -138,8 +140,72 @@ class ThumbnailHelper extends HtmlHelper {
         $optimalWidth = $options['optimalWidth'];
         $optimalHeight = $options['optimalHeight'];
 
-        $this->imageResized = imagecreatetruecolor($optimalWidth, $optimalHeight);
+        if($optimalWidth > $this->srcWidth)
+        {
+            $optimalWidth = $this->srcWidth;
+        }
 
+        if($optimalHeight > $this->srcHeight)
+        {
+            $optimalHeight = $this->srcHeight;
+        }
+
+        // generate new w/h if not provided
+        if($optimalWidth && !$optimalHeight)
+        {
+            $optimalHeight = $this->srcHeight * ($optimalHeight / $this->srcWidth);
+        }
+        elseif($optimalHeight && !$optimalWidth)
+        {
+            $optimalWidth = $this->srcWidth * ($optimalHeight / $this->srcHeight);
+        }
+        elseif(!$optimalWidth && !$optimalHeight)
+        {
+            $optimalWidth = $this->srcWidth;
+            $optimalHeight = $this->srcHeight;
+        }
+
+        $this->imageResized = imagecreatetruecolor($optimalWidth, $optimalHeight);
+       
+        $info = getimagesize($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage);
+        
+        if ( ($info[2] == IMAGETYPE_GIF) || ($info[2] == IMAGETYPE_PNG) ) {
+          $trnprt_indx = imagecolortransparent($this->openedImage);
+
+          // If we have a specific transparent color
+          if ($trnprt_indx >= 0) {
+
+            // Get the original image's transparent color's RGB values
+            $trnprt_color    = imagecolorsforindex($this->openedImage, $trnprt_indx);
+
+            // Allocate the same color in the new image resource
+            $trnprt_indx    = imagecolorallocate($this->imageResized, $trnprt_color['red'], $trnprt_color['green'], $trnprt_color['blue']);
+
+            // Completely fill the background of the new image with allocated color.
+            imagefill($this->imageResized, 0, 0, $trnprt_indx);
+
+            // Set the background color for new image to transparent
+            imagecolortransparent($this->imageResized, $trnprt_indx);
+
+
+          }
+          // Always make a transparent background color for PNGs that don't have one allocated already
+          elseif ($info[2] == IMAGETYPE_PNG) {
+
+            // Turn off transparency blending (temporarily)
+            imagealphablending($this->imageResized, false);
+
+            // Create a new transparent color for image
+            $color = imagecolorallocatealpha($this->imageResized, 0, 0, 0, 127);
+
+            // Completely fill the background of the new image with allocated color.
+            imagefill($this->imageResized, 0, 0, $color);
+
+            // Restore transparency blending
+            imagesavealpha($this->imageResized, true);
+          }
+        }
+            
         imagecopyresampled($this->imageResized, $this->openedImage, 0, 0, 0, 0, $optimalWidth, $optimalHeight, $this->srcWidth, $this->srcHeight);
 
         if ($this->resizeOption == 'crop') {
@@ -153,8 +219,8 @@ class ThumbnailHelper extends HtmlHelper {
         $cropStartY = ( $optimalHeight / 2) - ( $this->newHeight / 2 );
 
         $crop = $this->imageResized;
-        $this->imageResized = imagecreatetruecolor($this->newWidth, $this->newHeight);
-        imagecopyresampled($this->imageResized, $crop, 0, 0, $cropStartX, $cropStartY, $this->newWidth, $this->newHeight, $this->newWidth, $this->newHeight);
+        $this->imageResized = @imagecreatetruecolor($this->newWidth, $this->newHeight);
+        @imagecopyresampled($this->imageResized, $crop, 0, 0, $cropStartX, $cropStartY, $this->newWidth, $this->newHeight, $this->newWidth, $this->newHeight);
     }
 
     private function openImage($file) {
@@ -167,6 +233,7 @@ class ThumbnailHelper extends HtmlHelper {
                 break;
             case '.gif':
                 $img = imagecreatefromgif($file);
+                $transparent_index = imagecolortransparent($img);
                 break;
             case '.png':
                 $img = imagecreatefrompng($file);
@@ -260,5 +327,4 @@ class ThumbnailHelper extends HtmlHelper {
     }
 
 }
-
 ?>
