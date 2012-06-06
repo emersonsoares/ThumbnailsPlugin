@@ -2,13 +2,14 @@
 /**
  * Helper to generate thumbnail images dynamically by saving them to the cache.
  * Alternative to phpthumb.
- * 
+ *
  * Inspired in http://net.tutsplus.com/tutorials/php/image-resizing-made-easy-with-php/
- * 
+ *
  * @author Emerson Soares (dev.emerson@gmail.com)
  * @filesource https://github.com/emersonsoares/ThumbnailsHelper-for-CakePHP
  */
-class ThumbnailHelper extends HtmlHelper {
+App::uses('AppHelper', 'View/Helper');
+class ThumbnailHelper extends AppHelper {
 
     private $absoluteCachePath = '';
     private $cachePath = '';
@@ -28,7 +29,7 @@ class ThumbnailHelper extends HtmlHelper {
      * @param string $image Caminho da imagem no servidor
      * @param array $params Parametros de configuração do Thumbnail
      * @param array $options Parametros de configuração da tag <img/>
-     * @return string Retorna uma tag imagem, configurada de acordo com os parametros recebidos. 
+     * @return string Retorna uma tag imagem, configurada de acordo com os parametros recebidos.
      */
     public function render($image, $params, $options = null) {
         $this->setup($image, $params);
@@ -126,7 +127,7 @@ class ThumbnailHelper extends HtmlHelper {
                 if (imagetypes() & IMG_PNG) {
                     imagepng($this->imageResized, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage, $invertScaleQuality);
                 }
-                
+
                 break;
             default:
                 break;
@@ -166,9 +167,9 @@ class ThumbnailHelper extends HtmlHelper {
         }
 
         $this->imageResized = imagecreatetruecolor($optimalWidth, $optimalHeight);
-       
+
         $info = getimagesize($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage);
-        
+
         if ( ($info[2] == IMAGETYPE_GIF) || ($info[2] == IMAGETYPE_PNG) ) {
           $trnprt_indx = imagecolortransparent($this->openedImage);
 
@@ -205,7 +206,7 @@ class ThumbnailHelper extends HtmlHelper {
             imagesavealpha($this->imageResized, true);
           }
         }
-            
+
         imagecopyresampled($this->imageResized, $this->openedImage, 0, 0, 0, 0, $optimalWidth, $optimalHeight, $this->srcWidth, $this->srcHeight);
 
         if ($this->resizeOption == 'crop') {
