@@ -1,4 +1,4 @@
-#THUMBNAILS HELPER FOR CAKEPHP 2.0
+##Thumbnails helper for cakephp 2.x
 
 Helper to generate thumbnail images dynamically by saving them to the cache.
 Alternative to phpthumb.
