@@ -25,6 +25,9 @@ class ThumbnailHelper extends HtmlHelper {
     private $resizeOption = 'auto';
     private $openedImage = '';
     private $imageResized = '';
+    // Added External option - You should use 'external'=>true in View, if it's an external image
+    private $external = false;
+    private $link;
 
     /**
      *
@@ -36,9 +39,9 @@ class ThumbnailHelper extends HtmlHelper {
     public function render($image, $params, $options = null) {
         $this->setup($image, $params);
 
-        if (file_exists($this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage)) {
+        if (file_exists($this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage))
             return $this->image($this->openCachedImage(), $options);
-        } elseif ($this->openSrcImage()) {
+        elseif ($this->openSrcImage()) {
             $this->resizeImage();
             $this->saveImgCache();
             return $this->image($this->cachePath . DS . $this->srcImage, $options);
@@ -46,39 +49,40 @@ class ThumbnailHelper extends HtmlHelper {
     }
 
     private function setup($image, $params) {
-        if (isset($params['path'])) {
+        if (isset($params['path']))
             $this->path = $params['path'] . DS;
-        }
-
-        if (isset($params['width'])) {
+        
+        if (isset($params['width']))
             $this->newWidth = $params['width'];
-        }
-
-        if (isset($params['height'])) {
+        
+        if (isset($params['height']))
             $this->newHeight = $params['height'];
-        }
-
-        if (isset($params['quality'])) {
+        
+        if (isset($params['quality']))
             $this->quality = $params['quality'];
-        }
-
-        if (isset($params['absoluteCachePath'])) {
+        
+        if (isset($params['absoluteCachePath'])) 
             $this->absoluteCachePath = $params['absoluteCachePath'];
-        } else {
+        else
             $this->absoluteCachePath = WWW_ROOT . 'img';
-        }
-
-        if (isset($params['resizeOption'])) {
+        
+        if (isset($params['resizeOption']))
             $this->resizeOption = strtolower($params['resizeOption']);
-        }
-
-        if (isset($params['cachePath'])) {
+        
+        if (isset($params['cachePath']))
             $this->cachePath = $params['cachePath'] . DS . $this->newWidth . 'x' . $this->newHeight . DS . $this->quality . DS . $this->resizeOption;
-        } else {
+        else
             $this->cachePath = 'cache' . DS . $this->newWidth . 'x' . $this->newHeight . DS . $this->quality . DS . $this->resizeOption;
+          
+        if (isset($params['external']) && $params['external']) {
+            $this->external = true;
+            $this->link = $image;
+            $slash = strrpos($image, '/') + 1;
+            $this->srcImage = substr($image, $slash);
+        } else {
+            $this->external = false;
+            $this->srcImage = $image;
         }
-
-        $this->srcImage = $image;
     }
 
     private function openCachedImage() {
@@ -86,9 +90,13 @@ class ThumbnailHelper extends HtmlHelper {
     }
 
     private function openSrcImage() {
-        $image_path = $this->absoluteCachePath . DS . $this->path . DS . $this->srcImage;
-        if (file_exists($image_path)) {
-
+        if($this->external)
+            $image_path = $this->link;
+        else
+            $image_path = $this->absoluteCachePath . DS . $this->path . DS . $this->srcImage;
+        
+        //file_exists not working on external files so, I'm just leaving no "existance check" if file is external
+        if (file_exists($image_path) || $this->external) {
             list($width, $heigth) = getimagesize($image_path);
 
             $this->srcWidth = $width;
@@ -97,9 +105,8 @@ class ThumbnailHelper extends HtmlHelper {
             $this->openedImage = $this->openImage($image_path);
 
             return true;
-        } else {
+        } else
             return false;
-        }
     }
 
     private function saveImgCache() {
@@ -111,25 +118,20 @@ class ThumbnailHelper extends HtmlHelper {
         switch ($extension) {
             case '.jpg':
             case '.jpeg':
-                if (imagetypes() & IMG_JPG) {
+                if (imagetypes() & IMG_JPG)
                     imagejpeg($this->imageResized, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage, $this->quality);
-                }
                 break;
-
             case '.gif':
-                if (imagetypes() & IMG_GIF) {
+                if (imagetypes() & IMG_GIF)
                     imagegif($this->imageResized, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage);
-                }
                 break;
             case '.png':
                 $scaleQuality = round(($this->quality / 100) * 9);
 
                 $invertScaleQuality = 9 - $scaleQuality;
 
-                if (imagetypes() & IMG_PNG) {
+                if (imagetypes() & IMG_PNG)
                     imagepng($this->imageResized, $this->absoluteCachePath . DS . $this->cachePath . DS . $this->srcImage, $invertScaleQuality);
-                }
-
                 break;
             default:
                 break;
@@ -143,14 +145,12 @@ class ThumbnailHelper extends HtmlHelper {
         $optimalWidth = $options['optimalWidth'];
         $optimalHeight = $options['optimalHeight'];
 
-        if ($optimalWidth > $this->srcWidth) {
+        if ($optimalWidth > $this->srcWidth)
             $optimalWidth = $this->srcWidth;
-        }
-
-        if ($optimalHeight > $this->srcHeight) {
+        
+        if ($optimalHeight > $this->srcHeight)
             $optimalHeight = $this->srcHeight;
-        }
-
+        
         // generate new w/h if not provided
         if ($optimalWidth && !$optimalHeight)
             $optimalHeight = $this->srcHeight * ($optimalHeight / $this->srcWidth);
@@ -163,8 +163,11 @@ class ThumbnailHelper extends HtmlHelper {
 
         $this->imageResized = imagecreatetruecolor($optimalWidth, $optimalHeight);
 
-        $info = getimagesize($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage);
-
+        if($this->external)
+            $info = getimagesize($this->link);
+        else
+            $info = getimagesize($this->absoluteCachePath . DS . $this->path . DS . $this->srcImage);
+        
         if (($info[2] == IMAGETYPE_GIF) || ($info[2] == IMAGETYPE_PNG)) {
             $trnprt_indx = imagecolortransparent($this->openedImage);
 
@@ -202,9 +205,8 @@ class ThumbnailHelper extends HtmlHelper {
 
         imagecopyresampled($this->imageResized, $this->openedImage, 0, 0, 0, 0, $optimalWidth, $optimalHeight, $this->srcWidth, $this->srcHeight);
 
-        if ($this->resizeOption == 'crop') {
+        if ($this->resizeOption == 'crop') 
             $this->crop($optimalWidth, $optimalHeight);
-        }
     }
 
     private function crop($optimalWidth, $optimalHeight) {
@@ -308,16 +310,14 @@ class ThumbnailHelper extends HtmlHelper {
         $heightRatio = $this->srcHeight / $newHeight;
         $widthRatio = $this->srcWidth / $newWidth;
 
-        if ($heightRatio < $widthRatio) {
+        if ($heightRatio < $widthRatio) 
             $optimalRatio = $heightRatio;
-        } else {
+        else 
             $optimalRatio = $widthRatio;
-        }
 
         $optimalHeight = $this->srcHeight / $optimalRatio;
         $optimalWidth = $this->srcWidth / $optimalRatio;
 
         return array('optimalWidth' => $optimalWidth, 'optimalHeight' => $optimalHeight);
     }
-
 }
